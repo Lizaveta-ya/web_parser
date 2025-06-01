@@ -1,0 +1,89 @@
+pip install requests beautifulsoup4
+import requests
+from bs4 import BeautifulSoup
+
+def get_categories(url):
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+    }
+
+    response = requests.get(url, headers=headers)
+    if response.status_code != 200:
+        print(f"Ошибка при запросе: {response.status_code}")
+        return []
+
+    soup = BeautifulSoup(response.text, 'html.parser')
+
+    # Находим список категорий из главного меню
+    categories = soup.select('ul.menu > li.menu-item > a')
+    
+    category_list = []
+    for cat in categories:
+        name = cat.get_text(strip=True)
+        link = cat.get('href')
+        category_list.append((name, link))
+
+    return category_list
+
+if __name__ == '__main__':
+    url = 'https://alpinabook.ru'
+    categories = get_categories(url)
+
+    print("Категории сайта AlpinaBook:")
+    for name, link in categories:
+        print(f"- {name}: {link}")
+import requests
+from bs4 import BeautifulSoup
+import time
+
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+}
+
+def get_categories(url):
+    response = requests.get(url, headers=HEADERS)
+    soup = BeautifulSoup(response.text, 'html.parser')
+
+    categories = soup.select('ul.menu > li.menu-item > a')
+    return [(cat.get_text(strip=True), cat.get('href')) for cat in categories if cat.get('href')]
+
+def get_books_from_category(category_url):
+    response = requests.get(category_url, headers=HEADERS)
+    soup = BeautifulSoup(response.text, 'html.parser')
+
+    books = soup.select('div.catalog__item')
+    book_data = []
+
+    for book in books:
+        title_tag = book.select_one('div.catalog__item-name')
+        author_tag = book.select_one('div.catalog__item-author')
+        price_tag = book.select_one('div.catalog__item-price-current')
+
+        title = title_tag.get_text(strip=True) if title_tag else 'Не найдено'
+        author = author_tag.get_text(strip=True) if author_tag else 'Автор не указан'
+        price = price_tag.get_text(strip=True) if price_tag else 'Цена не указана'
+
+        book_data.append({
+            'Название': title,
+            'Автор': author,
+            'Цена': price
+        })
+
+    return book_data
+
+if __name__ == '__main__':
+    main_url = 'https://alpinabook.ru'
+    categories = get_categories(main_url)
+
+    print("Собираем книги из категорий...\n")
+
+    for name, link in categories:
+        print(f"Категория: {name} ({link})")
+        try:
+            books = get_books_from_category(link)
+            for book in books:
+                print(f"- {book['Название']} | {book['Автор']} | {book['Цена']}")
+            print()
+        except Exception as e:
+            print(f"Ошибка при парсинге категории {name}: {e}\n")
+
